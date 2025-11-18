@@ -13,7 +13,11 @@ class Poll(models.Model):
 
     def __str__(self):
         return self.title
-
+    class Meta:
+        indexes = [
+            models.Index(fields=['created_at']),
+            models.Index(fields=['expires_at']),
+        ]
 
 class Question(models.Model):
     poll = models.ForeignKey(Poll, on_delete=models.CASCADE, related_name="questions")
@@ -23,6 +27,10 @@ class Question(models.Model):
     def __str__(self):
         return f"{self.poll.title} - {self.text}"
 
+    class Meta:
+        indexes = [
+            models.Index(fields=['created_at']),
+        ]
 
 class Choice(models.Model):
     question = models.ForeignKey(Question, on_delete=models.CASCADE, related_name="choices")
@@ -38,8 +46,13 @@ class Vote(models.Model):
     choice = models.ForeignKey(Choice, on_delete=models.CASCADE, related_name="votes")
     created_at = models.DateTimeField(auto_now_add=True)
 
-    class Meta:
-        unique_together = ("user", "question")  # ONE vote per user per question
-
     def __str__(self):
         return f"{self.user} -> {self.question} = {self.choice}"
+    
+    class Meta:
+        unique_together = ('user', 'question') # ONE vote per user per question
+        indexes = [
+            models.Index(fields=['question']),
+            models.Index(fields=['choice']),
+            models.Index(fields=['user']),
+        ]
