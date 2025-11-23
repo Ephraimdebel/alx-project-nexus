@@ -3,11 +3,13 @@ from rest_framework import viewsets, generics, permissions, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from .models import Poll, Question, Choice, Vote
-from .serializers import (PollListSerializer, PollDetailSerializer,
-                          QuestionSerializer, ChoiceSerializer, VoteSerializer)
+from .serializers import (
+    PollListSerializer, PollDetailSerializer,
+    QuestionSerializer, ChoiceSerializer, VoteSerializer
+)
 from .permissions import IsAdminOrReadOnly
-from django.shortcuts import get_object_or_404
 from django.db.models import Count
+from django.core.cache import cache  # <-- ADDED
 
 
 class PollViewSet(viewsets.ModelViewSet):
@@ -19,28 +21,73 @@ class PollViewSet(viewsets.ModelViewSet):
             return PollListSerializer
         return PollDetailSerializer
 
+    # =========================
+    # 🔹 Cache Poll List
+    # =========================
+    def list(self, request, *args, **kwargs):
+        cache_key = "poll_list"
+        cached = cache.get(cache_key)
+
+        if cached:
+            return Response(cached)
+
+        response = super().list(request, *args, **kwargs)
+        cache.set(cache_key, response.data, timeout=30)   # 30 seconds
+        return response
+
+    # =========================
+    # 🔹 Cache Poll Detail
+    # =========================
+    def retrieve(self, request, *args, **kwargs):
+        pk = kwargs.get("pk")
+        cache_key = f"poll_detail_{pk}"
+
+        cached = cache.get(cache_key)
+        if cached:
+            return Response(cached)
+
+        response = super().retrieve(request, *args, **kwargs)
+        cache.set(cache_key, response.data, timeout=60)
+        return response
+
     def perform_create(self, serializer):
         serializer.save(created_by=self.request.user)
-    
+        cache.delete("poll_list")  # clear list cache when new poll is added
+
+    # =========================
+    # 🔹 Cache Poll Results
+    # =========================
     @action(detail=True, methods=['get'], permission_classes=[permissions.IsAuthenticated])
     def results(self, request, pk=None):
-        """
-        Returns vote counts per choice for all questions in the poll,
-        optimized with annotate to minimize DB queries.
-        """
+
+        cache_key = f"poll_results_{pk}"
+        cached = cache.get(cache_key)
+
+        if cached:
+            return Response(cached)
+
         poll = self.get_object()
-        # prefetch choices -> annotate vote counts
         questions = poll.questions.prefetch_related('choices__votes').all()
+
         results = []
         for q in questions:
-            choices = q.choices.annotate(votes_count=Count('votes')).values('id', 'text', 'votes_count')
+            choices = q.choices.annotate(votes_count=Count('votes')).values(
+                'id', 'text', 'votes_count'
+            )
             results.append({
                 'question_id': q.id,
                 'question_text': q.text,
                 'choices': list(choices)
             })
-        return Response({'poll_id': poll.id, 'title': poll.title, 'results': results})
 
+        data = {
+            'poll_id': poll.id,
+            'title': poll.title,
+            'results': results
+        }
+
+        cache.set(cache_key, data, timeout=30)  # cache results for 30s
+        return Response(data)
 
 
 class QuestionViewSet(viewsets.ModelViewSet):
@@ -67,4 +114,10 @@ class VoteCreateAPIView(generics.CreateAPIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def perform_create(self, serializer):
-        serializer.save(user=self.request.user)
+        vote = serializer.save(user=self.request.user)
+
+        # Invalidate cached results for that specific poll
+        poll_id = vote.choice.question.poll_id
+        cache.delete(f"poll_results_{poll_id}")
+
+        return vote
