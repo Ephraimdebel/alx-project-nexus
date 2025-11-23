@@ -2,6 +2,8 @@
 from rest_framework import viewsets, generics, permissions, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
+
+from polls_backend.poll.utils import rate_limit
 from .models import Poll, Question, Choice, Vote
 from .serializers import (
     PollListSerializer, PollDetailSerializer,
@@ -51,6 +53,13 @@ class PollViewSet(viewsets.ModelViewSet):
         return response
 
     def perform_create(self, serializer):
+        if self.request.user.is_authenticated:
+            rate_limit(
+                user_id=self.request.user.id,
+                action="create_poll",
+                limit=5,           # max 5 polls
+                window_seconds=60  # per minute
+            )
         serializer.save(created_by=self.request.user)
         cache.delete("poll_list")  # clear list cache when new poll is added
 
@@ -114,8 +123,14 @@ class VoteCreateAPIView(generics.CreateAPIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def perform_create(self, serializer):
+        user_id = self.request.user.id
+        rate_limit(
+            user_id=user_id,
+            action="vote",
+            limit=1,
+            window_seconds=10
+        )
         vote = serializer.save(user=self.request.user)
-
         # Invalidate cached results for that specific poll
         poll_id = vote.choice.question.poll_id
         cache.delete(f"poll_results_{poll_id}")
