@@ -3,7 +3,7 @@ from rest_framework import viewsets, generics, permissions, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
-from polls_backend.poll.utils import rate_limit
+from poll.utils import rate_limit
 from .models import Poll, Question, Choice, Vote
 from .serializers import (
     PollListSerializer, PollDetailSerializer,
