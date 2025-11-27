@@ -123,10 +123,14 @@ WSGI_APPLICATION = 'polls_backend.wsgi.application'
 #         'PORT': os.getenv("DB_PORT"),
 #     }
 # }
+# DATABASES = {
+#     "default": dj_database_url.config(
+#         default=f"postgres://{os.getenv('DB_USER')}:{os.getenv('DB_PASSWORD')}@{os.getenv('DB_HOST')}/{os.getenv('DB_NAME')}"
+#     )
+# }
+
 DATABASES = {
-    "default": dj_database_url.config(
-        default=f"postgres://{os.getenv('DB_USER')}:{os.getenv('DB_PASSWORD')}@{os.getenv('DB_HOST')}/{os.getenv('DB_NAME')}"
-    )
+    "default": dj_database_url.parse(os.getenv("DATABASE_URL"))
 }
 
 DEBUG = os.getenv("DEBUG", "False") == "True"
