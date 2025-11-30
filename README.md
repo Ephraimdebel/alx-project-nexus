@@ -180,6 +180,20 @@ source venv/bin/activate      # On Windows use: venv\Scripts\activate
 pip install --upgrade pip
 pip install -r requirements.txt
 ```
+
+### env file
+```
+
+SECRET_KEY=replace-me-with-secret-key
+DEBUG=True
+ALLOWED_HOSTS=127.0.0.1,localhost
+DB_NAME=polls_db
+DB_USER=polls_user
+DB_PASSWORD=polls_pass123
+DB_HOST=db
+DB_PORT=5432
+
+```
 ## 3. Apply migrations
 ```
 python manage.py migrate
