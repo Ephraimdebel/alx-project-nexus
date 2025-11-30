@@ -1,6 +1,10 @@
 services:
   - type: web
-    name: polls-backend
+    name: alx-project-nexus
     env: python
-    buildCommand: "pip install -r requirements.txt"
-    startCommand: "gunicorn polls_backend.wsgi:application"
+    region: oregon
+    buildCommand: |
+      pip install -r requirements.txt
+      python manage.py migrate
+      python create_superuser.py
+    startCommand: gunicorn polls_backend.wsgi
