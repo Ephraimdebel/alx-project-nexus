@@ -30,6 +30,8 @@ from django.contrib import admin
 from rest_framework import permissions
 from drf_yasg.views import get_schema_view
 from drf_yasg import openapi
+from django.http import JsonResponse
+from django.contrib.auth.models import User
 
 schema_view = get_schema_view(
    openapi.Info(
@@ -40,9 +42,15 @@ schema_view = get_schema_view(
    public=True,
    permission_classes=(permissions.AllowAny,),
 )
+def create_superuser(request):
+    if not User.objects.filter(username="admin").exists():
+        User.objects.create_superuser("admin", "admin@example.com", "AdminPassword123")
+        return JsonResponse({"status": "superuser created"})
+    return JsonResponse({"status": "superuser already exists"})
 
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/', include('poll.urls')),
     path('api/docs/', schema_view.with_ui('swagger', cache_timeout=0), name='schema-swagger-ui'),
+    path("create-superuser/", create_superuser),
 ]
