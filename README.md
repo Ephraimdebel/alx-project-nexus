@@ -162,3 +162,34 @@ Solution: Used Render services with Docker, RabbitMQ service, and background wor
 + Mentors and peers in the Discord #ProDevProjectNexus channel
 
 + This repository will continue to grow as I add more insights, diagrams, and best practices.
+
+
+## Getting Started
+
+### 1. Clone the repository
+
+```bash
+git clone https://github.com/Ephraimdebel/alx-project-nexus.git
+cd alx-project-nexus
+```
+## 2. Set up a virtual environment and install dependencies
+
+```
+python -m venv venv
+source venv/bin/activate      # On Windows use: venv\Scripts\activate
+pip install --upgrade pip
+pip install -r requirements.txt
+```
+## 3. Apply migrations
+```
+python manage.py migrate
+```
+## 4. Create a superuser
+```
+python manage.py createsuperuser
+Follow the prompts to set a username, email, and password.
+```
+## 5. Run the development server
+```
+python manage.py runserver
+```
